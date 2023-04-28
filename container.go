@@ -15,10 +15,13 @@ type Container struct {
 	bindings map[reflect.Type][]Binding
 }
 
+resolverToConcrete map[any]
+
 // TODO DJJ Here! Have to decide on global/instance naming scheme
 func Bind[T any](resolver any) {
 	BindInstance[T](&Global, resolver)
 }
+
 func BindInstance[T any](container *Container, resolver any) {
 	// TODO DJJ Ensure resolver is a function that returns a type
 	// assignable to T.

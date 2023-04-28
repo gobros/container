@@ -77,6 +77,10 @@ func main() {
 
 	// Resolve
 	for _, concrete := range container.Resolve[NameGiver]() {
-		fmt.Println(concrete.GiveName())
+		fmt.Printf("Name: %v", concrete.GiveName())
+	}
+
+	for _, concrete := range container.Resolve[FaveNumGiver]() {
+		fmt.Printf("FaveNum: %v", concrete.GiveFaveNum())
 	}
 }
