@@ -21,15 +21,18 @@ type Dano struct {
 
 var _ NameGiver = &Dano{}
 
+var danoInstanceNum = 0
+
 func (c *Dano) GiveName() string {
-	return "Dano"
+	return "Dano" + fmt.Sprint(danoInstanceNum)
 }
 
 func (c *Dano) GiveFaveNum() int {
-	return 1337
+	return danoInstanceNum
 }
 
 func NewDano() *Dano {
+	danoInstanceNum += 1
 	return &Dano{}
 }
 
@@ -39,11 +42,14 @@ type Joe struct {
 
 var _ NameGiver = &Joe{}
 
+var joeInstanceNum = 0
+
 func (c *Joe) GiveName() string {
-	return "Joe"
+	return "Joe" + fmt.Sprint(joeInstanceNum)
 }
 
 func NewJoe() *Joe {
+	joeInstanceNum += 1
 	return &Joe{}
 }
 
@@ -68,6 +74,7 @@ func NewComposition(subNameGivers []NameGiver) *Composition {
 
 func main() {
 	// Multiple interfaces to a single concrete
+	container.Bind[*Dano](NewDano)
 	container.Bind[NameGiver](NewDano)
 	container.Bind[FaveNumGiver](NewDano)
 
@@ -75,12 +82,19 @@ func main() {
 	container.Bind[NameGiver](NewJoe)
 	//container.Bind[NameGiver](NewComposition)
 
-	// Resolve
-	for _, concrete := range container.Resolve[NameGiver]() {
-		fmt.Printf("Name: %v", concrete.GiveName())
+	grabbedDano := container.Resolve[NameGiver]()
+	if grabbedDano == nil {
+		fmt.Println("Dano is nil")
+	} else {
+		fmt.Printf("Dano is not nil. Name is: %v\n", grabbedDano.GiveName())
 	}
 
-	for _, concrete := range container.Resolve[FaveNumGiver]() {
-		fmt.Printf("FaveNum: %v", concrete.GiveFaveNum())
+	// Resolve
+	for _, concrete := range container.ResolveAll[NameGiver]() {
+		fmt.Printf("Name: %v\n", concrete.GiveName())
+	}
+
+	for _, concrete := range container.ResolveAll[FaveNumGiver]() {
+		fmt.Printf("FaveNum: %v\n", concrete.GiveFaveNum())
 	}
 }
