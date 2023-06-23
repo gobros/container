@@ -80,21 +80,24 @@ func main() {
 
 	// Multiple concretes to a single interface
 	container.Bind[NameGiver](NewJoe)
+	container.Bind[NameGiver](NewDano)
 	//container.Bind[NameGiver](NewComposition)
 
+	// Resolve(). Resolves a single item. Grabs the most recently bound concrete.
 	grabbedDano := container.Resolve[NameGiver]()
 	if grabbedDano == nil {
-		fmt.Println("Dano is nil")
+		fmt.Println("Couldn't find a NameGiver concrete")
 	} else {
-		fmt.Printf("Dano is not nil. Name is: %v\n", grabbedDano.GiveName())
+		fmt.Printf("Found NameGiver concrete. Name is: %v\n", grabbedDano.GiveName())
 	}
 
-	// Resolve
-	for _, concrete := range container.ResolveAll[NameGiver]() {
-		fmt.Printf("Name: %v\n", concrete.GiveName())
+	// ResolveAll. Resolves all concretes
+	for idx, concrete := range container.ResolveAll[NameGiver]() {
+		fmt.Printf("NameGiver %v: (Name: %v)\n", idx, concrete.GiveName())
 	}
 
-	for _, concrete := range container.ResolveAll[FaveNumGiver]() {
-		fmt.Printf("FaveNum: %v\n", concrete.GiveFaveNum())
+	// ResolveAll. Resolves all concretes
+	for idx, concrete := range container.ResolveAll[FaveNumGiver]() {
+		fmt.Printf("FaveNumGiver %v: FaveNum: %v\n", idx, concrete.GiveFaveNum())
 	}
 }

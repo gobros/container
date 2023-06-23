@@ -15,6 +15,15 @@ type Container struct {
 	resolverToConcrete map[reflect.Value]any
 }
 
+func Empty() {
+	EmptyInstance(&Global)
+}
+
+func EmptyInstance(container *Container) {
+	container.bindingToResolver = make(map[reflect.Type][]reflect.Value)
+	container.resolverToConcrete = make(map[reflect.Value]any)
+}
+
 // TODO DJJ Here! Have to decide on global/instance naming scheme
 func Bind[T any](resolver any) {
 	BindInstance[T](&Global, resolver)
@@ -27,25 +36,29 @@ func BindInstance[T any](container *Container, resolver any) {
 	// Ensure the resolver is valid and has a chance of functioning
 	validateResolver(resolverType, genericType)
 
-	// It's okay to attempt and bind a resolver multiple times, but it's a no-op if you do
-	resolverAlreadyBound := false
-	for _, existingResolverType := range container.bindingToResolver[genericType] {
+	var foundIdx = -1
+	for idx, existingResolverType := range container.bindingToResolver[genericType] {
 		if existingResolverType == resolverType {
-			resolverAlreadyBound = true
+			foundIdx = idx
 			break
 		}
 	}
 
-	if !resolverAlreadyBound {
-		container.bindingToResolver[genericType] = append(container.bindingToResolver[genericType], resolverType)
+	// If the concrete type is already bound, drop it so we can re-add it to the
+	// end, making it take precedence in a single Resolve() call.
+	if foundIdx != -1 {
+		container.bindingToResolver[genericType] =
+			append(container.bindingToResolver[genericType][:foundIdx],
+				container.bindingToResolver[genericType][foundIdx+1:]...)
 	}
+
+	container.bindingToResolver[genericType] = append(container.bindingToResolver[genericType], resolverType)
 
 	if _, ok := container.resolverToConcrete[resolverType]; !ok {
 		container.resolverToConcrete[resolverType] = nil
 	}
 }
 
-// TODO DJJ Needs all changed to support multiple concretes
 func ResolveAll[T any]() []T {
 	return ResolveAllInstance[T](&Global)
 }
