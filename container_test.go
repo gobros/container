@@ -11,8 +11,8 @@ func setup() {
 	container.Empty()
 
 	// Reset the struct IDs now that the container is empty
-	Str1InstanceID = 0
-	Str2InstanceID = 0
+	Str1InstanceNumber = 0
+	Str2InstanceNumber = 0
 }
 
 func cleanup() {
@@ -22,19 +22,19 @@ func cleanup() {
 func TestSimpleBind(t *testing.T) {
 	// Given
 	setup()
-	container.Bind[TestInterfaceOne](NewTestStruct1)
+	container.Bind[PrimaryIDGiver](NewTestStruct1)
 
 	// When
-	str1Int1 := container.Resolve[TestInterfaceOne]()
+	str1Prim := container.Resolve[PrimaryIDGiver]()
 
 	// Then
-	assert.NotNil(t, str1Int1)
-	assert.Equal(t, 1, Str1InstanceID)
-	assert.Equal(t, 0, Str2InstanceID)
+	assert.NotNil(t, str1Prim)
+	assert.Equal(t, 1, Str1InstanceNumber)
+	assert.Equal(t, 0, Str2InstanceNumber)
 
-	str1Int1Name, str1Int1ID := str1Int1.GiveOneID()
-	assert.Equal(t, TestStruct1Name, str1Int1Name)
-	assert.Equal(t, Str1InstanceID, str1Int1ID)
+	primID := str1Prim.GivePrimaryID()
+	assert.Equal(t, TestStruct1Name, primID.Name)
+	assert.Equal(t, Str1InstanceNumber, primID.Number)
 
 	cleanup()
 }
@@ -45,12 +45,12 @@ func TestNothingBoundResolve(t *testing.T) {
 	// Nothing
 
 	// When
-	str1 := container.Resolve[TestInterfaceOne]()
-	assert.Equal(t, 0, Str1InstanceID)
-	assert.Equal(t, 0, Str2InstanceID)
+	str1Prim := container.Resolve[PrimaryIDGiver]()
+	assert.Equal(t, 0, Str1InstanceNumber)
+	assert.Equal(t, 0, Str2InstanceNumber)
 
 	// Then
-	assert.Nil(t, str1)
+	assert.Nil(t, str1Prim)
 }
 
 func TestNothingBoundResolveAll(t *testing.T) {
@@ -59,12 +59,12 @@ func TestNothingBoundResolveAll(t *testing.T) {
 	// Nothing
 
 	// When
-	str1Slice := container.ResolveAll[TestInterfaceOne]()
+	str1PrimSlice := container.ResolveAll[PrimaryIDGiver]()
 
 	// Then
-	assert.Empty(t, str1Slice)
-	assert.Equal(t, 0, Str1InstanceID)
-	assert.Equal(t, 0, Str2InstanceID)
+	assert.Empty(t, str1PrimSlice)
+	assert.Equal(t, 0, Str1InstanceNumber)
+	assert.Equal(t, 0, Str2InstanceNumber)
 
 	cleanup()
 }
@@ -72,25 +72,25 @@ func TestNothingBoundResolveAll(t *testing.T) {
 func TestMultipleInterfacesToOneConcrete(t *testing.T) {
 	// Given
 	setup()
-	container.Bind[TestInterfaceOne](NewTestStruct1)
-	container.Bind[TestInterfaceTwo](NewTestStruct1)
+	container.Bind[PrimaryIDGiver](NewTestStruct1)
+	container.Bind[SecondaryIDGiver](NewTestStruct1)
 
 	// When
-	str1Int1 := container.Resolve[TestInterfaceOne]()
-	str1Int2 := container.Resolve[TestInterfaceTwo]()
+	str1Prim := container.Resolve[PrimaryIDGiver]()
+	str1Sec := container.Resolve[SecondaryIDGiver]()
 
 	// Then
-	assert.NotNil(t, str1Int1)
-	assert.Equal(t, 1, Str1InstanceID)
-	assert.Equal(t, 0, Str2InstanceID)
+	assert.NotNil(t, str1Prim)
+	assert.Equal(t, 1, Str1InstanceNumber)
+	assert.Equal(t, 0, Str2InstanceNumber)
 
-	str1Int1Name, str1Int1ID := str1Int1.GiveOneID()
-	assert.Equal(t, TestStruct1Name, str1Int1Name)
-	assert.Equal(t, Str1InstanceID, str1Int1ID)
+	primID := str1Prim.GivePrimaryID()
+	assert.Equal(t, TestStruct1Name, primID.Name)
+	assert.Equal(t, Str1InstanceNumber, primID.Number)
 
-	str1Int2Name, str1Int2ID := str1Int2.GiveTwoID()
-	assert.Equal(t, TestStruct1Name, str1Int2Name)
-	assert.Equal(t, Str1InstanceID, str1Int2ID)
+	secID := str1Sec.GiveSecondaryID()
+	assert.Equal(t, TestStruct1Name, secID.Name)
+	assert.Equal(t, Str1InstanceNumber, secID.Number)
 
 	cleanup()
 }
@@ -98,27 +98,27 @@ func TestMultipleInterfacesToOneConcrete(t *testing.T) {
 func TestOneInterfaceToMultipleConcretes(t *testing.T) {
 	// Given
 	setup()
-	container.Bind[TestInterfaceOne](NewTestStruct1)
-	container.Bind[TestInterfaceOne](NewTestStruct2)
+	container.Bind[PrimaryIDGiver](NewTestStruct1)
+	container.Bind[PrimaryIDGiver](NewTestStruct2)
 
 	// When
-	int1Slice := container.ResolveAll[TestInterfaceOne]()
+	primSlice := container.ResolveAll[PrimaryIDGiver]()
 
 	// Then
-	assert.NotNil(t, int1Slice)
-	assert.Len(t, int1Slice, 2)
-	assert.Equal(t, 1, Str1InstanceID)
-	assert.Equal(t, 1, Str2InstanceID)
+	assert.NotNil(t, primSlice)
+	assert.Len(t, primSlice, 2)
+	assert.Equal(t, 1, Str1InstanceNumber)
+	assert.Equal(t, 1, Str2InstanceNumber)
 
-	str1Int1 := int1Slice[0]
-	str1Int1Name, str1Int1ID := str1Int1.GiveOneID()
-	assert.Equal(t, TestStruct1Name, str1Int1Name)
-	assert.Equal(t, Str1InstanceID, str1Int1ID)
+	str1Prim := primSlice[0]
+	primID := str1Prim.GivePrimaryID()
+	assert.Equal(t, TestStruct1Name, primID.Name)
+	assert.Equal(t, Str1InstanceNumber, primID.Number)
 
-	str2Int1 := int1Slice[1]
-	str2Int1Name, str2Int1ID := str2Int1.GiveOneID()
-	assert.Equal(t, TestStruct2Name, str2Int1Name)
-	assert.Equal(t, Str2InstanceID, str2Int1ID)
+	str2Prim := primSlice[1]
+	secID := str2Prim.GivePrimaryID()
+	assert.Equal(t, TestStruct2Name, secID.Name)
+	assert.Equal(t, Str2InstanceNumber, secID.Number)
 
 	cleanup()
 }
@@ -126,55 +126,115 @@ func TestOneInterfaceToMultipleConcretes(t *testing.T) {
 func TestMultipleInterfaceToMultipleConcretes(t *testing.T) {
 	// Given
 	setup()
-	container.Bind[TestInterfaceOne](NewTestStruct1)
-	container.Bind[TestInterfaceTwo](NewTestStruct1)
-	container.Bind[TestInterfaceOne](NewTestStruct2)
-	container.Bind[TestInterfaceTwo](NewTestStruct2)
+	container.Bind[PrimaryIDGiver](NewTestStruct1)
+	container.Bind[SecondaryIDGiver](NewTestStruct1)
+	container.Bind[PrimaryIDGiver](NewTestStruct2)
+	container.Bind[SecondaryIDGiver](NewTestStruct2)
 
 	// When
-	int1Slice := container.ResolveAll[TestInterfaceOne]()
-	int2Slice := container.ResolveAll[TestInterfaceTwo]()
+	PrimSlice := container.ResolveAll[PrimaryIDGiver]()
+	SecSlice := container.ResolveAll[SecondaryIDGiver]()
 
 	// Then
-	assert.NotNil(t, int1Slice)
-	assert.Len(t, int1Slice, 2)
-	assert.Equal(t, 1, Str1InstanceID)
-	assert.Equal(t, 1, Str2InstanceID)
+	assert.NotNil(t, PrimSlice)
+	assert.Len(t, PrimSlice, 2)
+	assert.Equal(t, 1, Str1InstanceNumber)
+	assert.Equal(t, 1, Str2InstanceNumber)
 
-	str1Int1 := int1Slice[0]
-	str1Int1Name, str1Int1ID := str1Int1.GiveOneID()
-	assert.Equal(t, TestStruct1Name, str1Int1Name)
-	assert.Equal(t, Str1InstanceID, str1Int1ID)
+	str1Prim := PrimSlice[0]
+	str1PrimID := str1Prim.GivePrimaryID()
+	assert.Equal(t, TestStruct1Name, str1PrimID.Name)
+	assert.Equal(t, Str1InstanceNumber, str1PrimID.Number)
 
-	str2Int1 := int1Slice[1]
-	str2Int1Name, str2Int1ID := str2Int1.GiveOneID()
-	assert.Equal(t, TestStruct2Name, str2Int1Name)
-	assert.Equal(t, Str2InstanceID, str2Int1ID)
+	str2Prim := PrimSlice[1]
+	str2PrimID := str2Prim.GivePrimaryID()
+	assert.Equal(t, TestStruct2Name, str2PrimID.Name)
+	assert.Equal(t, Str2InstanceNumber, str2PrimID.Number)
 
-	str1Int2 := int2Slice[0]
-	str1Int2Name, str1Int2ID := str1Int2.GiveTwoID()
-	assert.Equal(t, TestStruct1Name, str1Int2Name)
-	assert.Equal(t, Str1InstanceID, str1Int2ID)
+	str1Sec := SecSlice[0]
+	str1SecID := str1Sec.GiveSecondaryID()
+	assert.Equal(t, TestStruct1Name, str1SecID.Name)
+	assert.Equal(t, Str1InstanceNumber, str1SecID.Number)
 
-	str2Int2 := int2Slice[1]
-	str2Int2Name, str2Int2ID := str2Int2.GiveTwoID()
-	assert.Equal(t, TestStruct2Name, str2Int2Name)
-	assert.Equal(t, Str2InstanceID, str2Int2ID)
+	str2Sec := SecSlice[1]
+	str2SecID := str2Sec.GiveSecondaryID()
+	assert.Equal(t, TestStruct2Name, str2SecID.Name)
+	assert.Equal(t, Str2InstanceNumber, str2SecID.Number)
 
 	cleanup()
 }
 
-// Test structs
-type TestInterfaceOne interface {
-	GiveOneID() (string, int)
+func TestResolverWithArgs(t *testing.T) {
+	// Given
+	setup()
+	container.Bind[PrimaryIDGiver](NewTestStruct1)
+	container.Bind[SecondaryIDGiver](NewTestStruct1)
+	container.Bind[PrimaryIDGiver](NewTestStruct2)
+	container.Bind[SecondaryIDGiver](NewTestStruct2)
+	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+
+	// When
+	agg := container.Resolve[IDAggregator]()
+
+	// Then
+	assert.NotNil(t, agg)
+	primIDs := agg.GivePrimaryIDs()
+	assert.Len(t, primIDs, 2)
+	assert.Equal(t, TestStruct1Name, primIDs[0].Name)
+	assert.Equal(t, Str1InstanceNumber, primIDs[0].Number)
+	assert.Equal(t, TestStruct2Name, primIDs[1].Name)
+	assert.Equal(t, Str2InstanceNumber, primIDs[1].Number)
+
+	secID := agg.GiveSecondaryID()
+	assert.Equal(t, TestStruct2Name, secID.Name)
+	assert.Equal(t, Str2InstanceNumber, secID.Number)
+
+	cleanup()
 }
 
-type TestInterfaceTwo interface {
-	GiveTwoID() (string, int)
+func TestResolverWithArgsMissingDependency(t *testing.T) {
+	// Given
+	setup()
+	container.Bind[PrimaryIDGiver](NewTestStruct1)
+	container.Bind[PrimaryIDGiver](NewTestStruct2)
+	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+
+	// When & Then
+	assert.Panics(t, func() { container.Resolve[IDAggregator]() })
+
+	cleanup()
 }
 
-// TestStruct1 struct - Implements TestInterfaceOne and TestInterfaceTwo
-var Str1InstanceID = 0
+func TestResolverWithArgsMissingDependencies(t *testing.T) {
+	// Given
+	setup()
+	container.Bind[SecondaryIDGiver](NewTestStruct1)
+	container.Bind[SecondaryIDGiver](NewTestStruct2)
+	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+
+	// When & Then
+	assert.Panics(t, func() { container.Resolve[IDAggregator]() })
+
+	cleanup()
+}
+
+// Test types
+type ID struct {
+	Name   string
+	Number int
+}
+
+// Test interfaces
+type PrimaryIDGiver interface {
+	GivePrimaryID() ID
+}
+
+type SecondaryIDGiver interface {
+	GiveSecondaryID() ID
+}
+
+// TestStruct1 struct - Implements PrimaryIDGiver and SecondaryIDGiver
+var Str1InstanceNumber = 0
 
 const TestStruct1Name = "TestStruct1"
 
@@ -182,26 +242,26 @@ type TestStruct1 struct {
 	InstanceId int
 }
 
-var _ TestInterfaceOne = &TestStruct1{}
-var _ TestInterfaceTwo = &TestStruct1{}
+var _ PrimaryIDGiver = &TestStruct1{}
+var _ SecondaryIDGiver = &TestStruct1{}
 
 func NewTestStruct1() *TestStruct1 {
-	Str1InstanceID += 1
+	Str1InstanceNumber += 1
 	return &TestStruct1{
-		InstanceId: Str1InstanceID,
+		InstanceId: Str1InstanceNumber,
 	}
 }
 
-func (c *TestStruct1) GiveOneID() (string, int) {
-	return TestStruct1Name, c.InstanceId
+func (c *TestStruct1) GivePrimaryID() ID {
+	return ID{Name: TestStruct1Name, Number: c.InstanceId}
 }
 
-func (c *TestStruct1) GiveTwoID() (string, int) {
-	return TestStruct1Name, c.InstanceId
+func (c *TestStruct1) GiveSecondaryID() ID {
+	return ID{Name: TestStruct1Name, Number: c.InstanceId}
 }
 
-// TestStruct2 struct - Implements TestInterfaceOne and TestInterfaceTwo
-var Str2InstanceID = 0
+// TestStruct2 struct - Implements PrimaryIDGiver and SecondaryIDGiver
+var Str2InstanceNumber = 0
 
 const TestStruct2Name = "TestStruct2"
 
@@ -209,20 +269,54 @@ type TestStruct2 struct {
 	InstanceId int
 }
 
-var _ TestInterfaceOne = &TestStruct2{}
-var _ TestInterfaceTwo = &TestStruct2{}
+var _ PrimaryIDGiver = &TestStruct2{}
+var _ SecondaryIDGiver = &TestStruct2{}
 
 func NewTestStruct2() *TestStruct2 {
-	Str2InstanceID += 1
+	Str2InstanceNumber += 1
 	return &TestStruct2{
-		InstanceId: Str2InstanceID,
+		InstanceId: Str2InstanceNumber,
 	}
 }
 
-func (c *TestStruct2) GiveOneID() (string, int) {
-	return TestStruct2Name, c.InstanceId
+func (c *TestStruct2) GivePrimaryID() ID {
+	return ID{Name: TestStruct2Name, Number: c.InstanceId}
 }
 
-func (c *TestStruct2) GiveTwoID() (string, int) {
-	return TestStruct2Name, c.InstanceId
+func (c *TestStruct2) GiveSecondaryID() ID {
+	return ID{Name: TestStruct2Name, Number: c.InstanceId}
+}
+
+// TestCompositeStruct struct - Has dependencies that must be fulfilled
+type IDAggregator interface {
+	GivePrimaryIDs() []ID
+	GiveSecondaryID() ID
+}
+
+var TestCompositeStructID = 0
+
+type TestIDAggregatorStruct struct {
+	primeIDGivers    []PrimaryIDGiver
+	secondaryIDGiver SecondaryIDGiver
+}
+
+var _ IDAggregator = &TestIDAggregatorStruct{}
+
+func NewTestIDAggregatorStruct(primIDGivers []PrimaryIDGiver, secondaryIDGiver SecondaryIDGiver) *TestIDAggregatorStruct {
+	return &TestIDAggregatorStruct{
+		primeIDGivers:    primIDGivers,
+		secondaryIDGiver: secondaryIDGiver,
+	}
+}
+
+func (c *TestIDAggregatorStruct) GivePrimaryIDs() []ID {
+	retVal := make([]ID, len(c.primeIDGivers))
+	for idx, val := range c.primeIDGivers {
+		retVal[idx] = val.GivePrimaryID()
+	}
+	return retVal
+}
+
+func (c *TestIDAggregatorStruct) GiveSecondaryID() ID {
+	return c.secondaryIDGiver.GiveSecondaryID()
 }

@@ -1,6 +1,7 @@
 package container
 
 import (
+	"fmt"
 	"reflect"
 )
 
@@ -64,25 +65,46 @@ func ResolveAll[T any]() []T {
 }
 
 func ResolveAllInstance[T any](container *Container) []T {
-	genericType := getBindingType[T]()
-	// TODO Check for error
+	bindingType := getBindingType[T]()
+	return resolveAllInstanceInternal(bindingType, container).([]T)
+}
 
-	resolverTypes := container.bindingToResolver[genericType]
-	resolved := make([]T, 0)
+func resolveAllInstanceInternal(bindingType reflect.Type, container *Container) any {
+	resolved := reflect.MakeSlice(reflect.SliceOf(bindingType), 0, 0)
+	resolverTypes := container.bindingToResolver[bindingType]
 
-	for _, resolverType := range resolverTypes {
-		if container.resolverToConcrete[resolverType] == nil {
-			// TODO DJJ Break out to helper and reflect parameters
-			// to resolver. Attempt to resolve parameters.
-			// TODO wirecat check for errors returns here
-			values := resolverType.Call(nil)
-			container.resolverToConcrete[resolverType] = values[0].Interface()
+	for _, resolverValue := range resolverTypes {
+		if container.resolverToConcrete[resolverValue] == nil {
+			resolverType := resolverValue.Type()
+			argCount := resolverType.NumIn()
+			args := make([]reflect.Value, argCount)
+			for i := 0; i < argCount; i++ {
+				argType := resolverType.In(i)
+				if argType.Kind() == reflect.Slice {
+					sliceType := argType.Elem()
+					argVal := reflect.ValueOf(resolveAllInstanceInternal(sliceType, container))
+					if argVal.Len() > 0 {
+						args[i] = argVal
+					} else {
+						panic(fmt.Sprintf("unable to resolve dependency (%v) for interface (%v)", argType, bindingType.Name()))
+					}
+				} else {
+					argVal := reflect.ValueOf(resolveAllInstanceInternal(argType, container))
+					if argVal.Len() > 0 {
+						args[i] = argVal.Index(argVal.Len() - 1)
+					} else {
+						panic(fmt.Sprintf("unable to resolve dependency (%v) for interface (%v)", argType, bindingType.Name()))
+					}
+				}
+			}
+			// TODO wirecat handle panics to Call if possible
+			values := resolverValue.Call(args)
+			container.resolverToConcrete[resolverValue] = values[0].Interface()
 		}
 
-		resolved = append(resolved, container.resolverToConcrete[resolverType].(T))
+		resolved = reflect.Append(resolved, reflect.ValueOf(container.resolverToConcrete[resolverValue]))
 	}
-
-	return resolved
+	return resolved.Interface()
 }
 
 func Resolve[T any]() T {
@@ -130,9 +152,11 @@ func validateResolver(resolverType reflect.Value, genericType reflect.Type) {
 		for i := 0; i < resolverType.Type().NumIn(); i++ {
 			paramType := resolverType.Type().In(i)
 
-			if paramType.Kind() != reflect.Ptr && paramType.Kind() != reflect.Interface {
+			if paramType.Kind() != reflect.Ptr &&
+				paramType.Kind() != reflect.Interface &&
+				paramType.Kind() != reflect.Slice {
 				// TODO wirecat real errors
-				panic("resolver input parameters must all be of type pointer or interface")
+				panic("resolver input parameters must all be of type pointer, interface, or slice")
 			}
 		}
 	}
