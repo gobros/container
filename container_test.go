@@ -39,6 +39,29 @@ func TestSimpleBind(t *testing.T) {
 	cleanup()
 }
 
+func TestSimpleBindPointer(t *testing.T) {
+	//Given
+	type ptrStruct struct {
+		Name       string
+		FaveNumber int
+	}
+	testVal := ptrStruct{
+		Name:       "wirecat",
+		FaveNumber: 1337,
+	}
+	container.Bind[*ptrStruct](func() *ptrStruct {
+		return &testVal
+	})
+
+	// When
+	resolvedVal := container.Resolve[*ptrStruct]()
+
+	// Then
+	assert.NotNil(t, resolvedVal)
+	assert.Equal(t, "wirecat", resolvedVal.Name)
+	assert.Equal(t, 1337, resolvedVal.FaveNumber)
+}
+
 func TestNothingBoundResolve(t *testing.T) {
 	// Given
 	setup()
