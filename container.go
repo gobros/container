@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-var Global = Container{
+var Global = &Container{
 	bindingToResolver:  make(map[reflect.Type][]reflect.Value),
 	resolverToConcrete: make(map[reflect.Value]any),
 }
@@ -16,26 +16,24 @@ type Container struct {
 	resolverToConcrete map[reflect.Value]any
 }
 
-func Empty() {
-	EmptyInstance(&Global)
-}
-
 func EmptyInstance(container *Container) {
 	container.bindingToResolver = make(map[reflect.Type][]reflect.Value)
 	container.resolverToConcrete = make(map[reflect.Value]any)
 }
 
-// TODO DJJ Here! Have to decide on global/instance naming scheme
-func Bind[T any](resolver any) {
-	BindInstance[T](&Global, resolver)
+func Bind[T any](resolver any) error {
+	return BindInstance[T](Global, resolver)
 }
 
-func BindInstance[T any](container *Container, resolver any) {
+func BindInstance[T any](container *Container, resolver any) error {
 	genericType := getBindingType[T]()
 	resolverType := reflect.ValueOf(resolver)
 
 	// Ensure the resolver is valid and has a chance of functioning
-	validateResolver(resolverType, genericType)
+	err := validateResolver(resolverType, genericType)
+	if err != nil {
+		return fmt.Errorf("resolver validation failed: %w", err)
+	}
 
 	var foundIdx = -1
 	for idx, existingResolverType := range container.bindingToResolver[genericType] {
@@ -58,96 +56,113 @@ func BindInstance[T any](container *Container, resolver any) {
 	if _, ok := container.resolverToConcrete[resolverType]; !ok {
 		container.resolverToConcrete[resolverType] = nil
 	}
+
+	return nil
 }
 
-func ResolveAll[T any]() []T {
-	return ResolveAllInstance[T](&Global)
+func ResolveAll[T any]() ([]T, error) {
+	return ResolveAllInstance[T](Global)
 }
 
-func ResolveAllInstance[T any](container *Container) []T {
+func ResolveAllInstance[T any](container *Container) ([]T, error) {
 	bindingType := getBindingType[T]()
-	return resolveAllInstanceInternal(bindingType, container).([]T)
+	retVal, err := resolveAllInstanceInternal(bindingType, container)
+	if err != nil {
+		return nil, err
+	}
+	return retVal.([]T), nil
 }
 
-func resolveAllInstanceInternal(bindingType reflect.Type, container *Container) any {
+func Resolve[T any]() (T, error) {
+	return ResolveInstance[T](Global)
+}
+
+func ResolveInstance[T any](container *Container) (T, error) {
+	resolvedConcretes, err := ResolveAllInstance[T](container)
+	if err != nil {
+		return *new(T), err
+	}
+
+	return resolvedConcretes[len(resolvedConcretes)-1], nil
+}
+
+func resolveAllInstanceInternal(bindingType reflect.Type, container *Container) (any, error) {
 	resolved := reflect.MakeSlice(reflect.SliceOf(bindingType), 0, 0)
 	resolverTypes := container.bindingToResolver[bindingType]
 
+	if len(resolverTypes) == 0 {
+		return nil, fmt.Errorf("failed to resolve for interface (%v), nothing bound", bindingType.Name())
+	}
+
 	for _, resolverValue := range resolverTypes {
 		if container.resolverToConcrete[resolverValue] == nil {
-			resolverType := resolverValue.Type()
-			argCount := resolverType.NumIn()
-			args := make([]reflect.Value, argCount)
-			for i := 0; i < argCount; i++ {
-				argType := resolverType.In(i)
-				if argType.Kind() == reflect.Slice {
-					sliceType := argType.Elem()
-					argVal := reflect.ValueOf(resolveAllInstanceInternal(sliceType, container))
-					if argVal.Len() > 0 {
-						args[i] = argVal
-					} else {
-						panic(fmt.Sprintf("unable to resolve dependency (%v) for interface (%v)", argType, bindingType.Name()))
-					}
-				} else {
-					argVal := reflect.ValueOf(resolveAllInstanceInternal(argType, container))
-					if argVal.Len() > 0 {
-						args[i] = argVal.Index(argVal.Len() - 1)
-					} else {
-						panic(fmt.Sprintf("unable to resolve dependency (%v) for interface (%v)", argType, bindingType.Name()))
-					}
-				}
+			args, err := resolveArguments(container, resolverValue, bindingType)
+			if err != nil {
+				return nil, err
 			}
-			// TODO wirecat handle panics to Call if possible
+
+			// TODO: wirecat handle panics to Call if possible
 			values := resolverValue.Call(args)
 			container.resolverToConcrete[resolverValue] = values[0].Interface()
 		}
 
 		resolved = reflect.Append(resolved, reflect.ValueOf(container.resolverToConcrete[resolverValue]))
 	}
-	return resolved.Interface()
+
+	return resolved.Interface(), nil
 }
 
-func Resolve[T any]() T {
-	return ResolveInstance[T](&Global)
-}
+func resolveArguments(container *Container, resolverValue reflect.Value, bindingType reflect.Type) ([]reflect.Value, error) {
+	resolverType := resolverValue.Type()
+	argCount := resolverType.NumIn()
+	args := make([]reflect.Value, argCount)
+	for i := 0; i < argCount; i++ {
+		argType := resolverType.In(i)
 
-func ResolveInstance[T any](container *Container) T {
-	resolvedConcretes := ResolveAllInstance[T](container)
-	if len(resolvedConcretes) > 0 {
-		return resolvedConcretes[len(resolvedConcretes)-1]
-	} else {
-		var def T
-		return def
+		if argType.Kind() == reflect.Slice {
+			sliceType := argType.Elem()
+			arg, err := resolveAllInstanceInternal(sliceType, container)
+			if err != nil {
+				return nil, fmt.Errorf("resolver dependency error, failed to resolve dependency (%v) for interface (%v): %w", argType, bindingType.Name(), err)
+			}
+			argVal := reflect.ValueOf(arg)
+			args[i] = argVal
+		} else {
+			arg, err := resolveAllInstanceInternal(argType, container)
+			if err != nil {
+				return nil, fmt.Errorf("resolver dependency error, failed to resolve dependency (%v) for interface (%v): %w", argType, bindingType.Name(), err)
+			}
+			argVal := reflect.ValueOf(arg)
+			args[i] = argVal.Index(argVal.Len() - 1)
+		}
 	}
+	return args, nil
 }
 
 func getBindingType[T any]() reflect.Type {
 	return reflect.TypeOf(new(T)).Elem()
 }
 
-func validateResolver(resolverType reflect.Value, genericType reflect.Type) {
+func validateResolver(resolverType reflect.Value, genericType reflect.Type) error {
 	if resolverType.Kind() != reflect.Func {
-		// TODO wirecat real errors
-		panic("resolver must be a function")
+		return fmt.Errorf("resolver error, resolver must be a function")
 	}
+
 	if resolverType.Type().NumOut() > 0 {
 		firtReturn := resolverType.Type().Out(0)
 		if genericType.Kind() != reflect.Ptr && genericType.Kind() != reflect.Interface {
-			// TODO wirecat real errors
-			panic("generic must be a pointer or interface")
+			return fmt.Errorf("resolver error, interface T must be a pointer or interface")
 		}
 		if genericType.Kind() == reflect.Interface && !firtReturn.Implements(genericType) {
-			// TODO wirecat real errors
-			panic("resolver must return a type that implements the provided interface T")
+			return fmt.Errorf("resolver error, resolver must return a type that implements the provided interface T")
 		}
 		if genericType.Kind() != reflect.Interface && !firtReturn.AssignableTo(genericType) {
-			// TODO wirecat real errors
-			panic("resolver must return a type assignable to T")
+			return fmt.Errorf("resolver error, resolver must return a type assignable to interface T")
 		}
 	} else {
-		// TODO wirecat real errors
-		panic("resolver must return a concrete as it's first return")
+		return fmt.Errorf("resolver error, resolver must return a concrete as it's first return")
 	}
+
 	if resolverType.Type().NumIn() > 0 {
 		for i := 0; i < resolverType.Type().NumIn(); i++ {
 			paramType := resolverType.Type().In(i)
@@ -155,9 +170,10 @@ func validateResolver(resolverType reflect.Value, genericType reflect.Type) {
 			if paramType.Kind() != reflect.Ptr &&
 				paramType.Kind() != reflect.Interface &&
 				paramType.Kind() != reflect.Slice {
-				// TODO wirecat real errors
-				panic("resolver input parameters must all be of type pointer, interface, or slice")
+				return fmt.Errorf("resolver error, resolver input parameters must all be of type pointer, interface, or slice")
 			}
 		}
 	}
+
+	return nil
 }

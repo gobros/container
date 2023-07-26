@@ -8,7 +8,7 @@ import (
 )
 
 func setup() {
-	container.Empty()
+	container.EmptyInstance(container.Global)
 
 	// Reset the struct IDs now that the container is empty
 	Str1InstanceNumber = 0
@@ -22,12 +22,37 @@ func cleanup() {
 func TestSimpleBind(t *testing.T) {
 	// Given
 	setup()
+
 	container.Bind[PrimaryIDGiver](NewTestStruct1)
 
 	// When
-	str1Prim := container.Resolve[PrimaryIDGiver]()
+	str1Prim, err := container.Resolve[PrimaryIDGiver]()
 
 	// Then
+	assert.NoError(t, err)
+	assert.NotNil(t, str1Prim)
+	assert.Equal(t, 1, Str1InstanceNumber)
+	assert.Equal(t, 0, Str2InstanceNumber)
+
+	primID := str1Prim.GivePrimaryID()
+	assert.Equal(t, TestStruct1Name, primID.Name)
+	assert.Equal(t, Str1InstanceNumber, primID.Number)
+
+	cleanup()
+}
+
+func TestSimpleBindOverride(t *testing.T) {
+	// Given
+	setup()
+
+	container.Bind[PrimaryIDGiver](NewTestStruct1)
+	container.Bind[PrimaryIDGiver](NewTestStruct1)
+
+	// When
+	str1Prim, err := container.Resolve[PrimaryIDGiver]()
+
+	// Then
+	assert.NoError(t, err)
 	assert.NotNil(t, str1Prim)
 	assert.Equal(t, 1, Str1InstanceNumber)
 	assert.Equal(t, 0, Str2InstanceNumber)
@@ -41,6 +66,8 @@ func TestSimpleBind(t *testing.T) {
 
 func TestSimpleBindPointer(t *testing.T) {
 	//Given
+	setup()
+
 	type ptrStruct struct {
 		Name       string
 		FaveNumber int
@@ -54,40 +81,132 @@ func TestSimpleBindPointer(t *testing.T) {
 	})
 
 	// When
-	resolvedVal := container.Resolve[*ptrStruct]()
+	resolvedVal, err := container.Resolve[*ptrStruct]()
 
 	// Then
+	assert.NoError(t, err)
 	assert.NotNil(t, resolvedVal)
 	assert.Equal(t, "wirecat", resolvedVal.Name)
 	assert.Equal(t, 1337, resolvedVal.FaveNumber)
+
+	cleanup()
 }
 
 func TestNothingBoundResolve(t *testing.T) {
 	// Given
 	setup()
-	// Nothing
 
 	// When
-	str1Prim := container.Resolve[PrimaryIDGiver]()
+	str1Prim, err := container.Resolve[PrimaryIDGiver]()
 	assert.Equal(t, 0, Str1InstanceNumber)
 	assert.Equal(t, 0, Str2InstanceNumber)
 
 	// Then
 	assert.Nil(t, str1Prim)
+	assert.Error(t, err)
+
+	cleanup()
 }
 
 func TestNothingBoundResolveAll(t *testing.T) {
 	// Given
 	setup()
-	// Nothing
 
 	// When
-	str1PrimSlice := container.ResolveAll[PrimaryIDGiver]()
+	str1PrimSlice, err := container.ResolveAll[PrimaryIDGiver]()
 
 	// Then
 	assert.Empty(t, str1PrimSlice)
+	assert.Error(t, err)
 	assert.Equal(t, 0, Str1InstanceNumber)
 	assert.Equal(t, 0, Str2InstanceNumber)
+
+	cleanup()
+}
+
+func TestResolverErrorNotAFunction(t *testing.T) {
+	// Given
+	setup()
+
+	// When
+	err := container.Bind[PrimaryIDGiver](5)
+
+	// Then
+	assert.Error(t, err)
+
+	cleanup()
+}
+
+func TestResolverErrorInterfaceBad(t *testing.T) {
+	// Given
+	setup()
+
+	// When
+	err := container.Bind[int](func() int {
+		return 5
+	})
+
+	// Then
+	assert.Error(t, err)
+
+	cleanup()
+}
+
+func TestResolverErrorReturnDoesntImplementInterface(t *testing.T) {
+	// Given
+	setup()
+
+	// When
+	err := container.Bind[PrimaryIDGiver](func() int {
+		return 5
+	})
+
+	// Then
+	assert.Error(t, err)
+
+	cleanup()
+}
+
+func TestResolverErrorReturnIsntAssignableToInterface(t *testing.T) {
+	// Given
+	setup()
+
+	// When
+	err := container.Bind[*int](func() float32 {
+		return float32(5)
+	})
+
+	// Then
+	assert.Error(t, err)
+
+	cleanup()
+}
+
+func TestResolverErrorNoReturn(t *testing.T) {
+	// Given
+	setup()
+
+	// When
+	err := container.Bind[*int](func() {
+	})
+
+	// Then
+	assert.Error(t, err)
+
+	cleanup()
+}
+
+func TestResolverErrorBadArg(t *testing.T) {
+	// Given
+	setup()
+
+	// When
+	err := container.Bind[PrimaryIDGiver](func(a int) *TestStruct1 {
+		return NewTestStruct1()
+	})
+
+	// Then
+	assert.Error(t, err)
 
 	cleanup()
 }
@@ -95,15 +214,19 @@ func TestNothingBoundResolveAll(t *testing.T) {
 func TestMultipleInterfacesToOneConcrete(t *testing.T) {
 	// Given
 	setup()
+
 	container.Bind[PrimaryIDGiver](NewTestStruct1)
 	container.Bind[SecondaryIDGiver](NewTestStruct1)
 
 	// When
-	str1Prim := container.Resolve[PrimaryIDGiver]()
-	str1Sec := container.Resolve[SecondaryIDGiver]()
+	str1Prim, str1PrimErr := container.Resolve[PrimaryIDGiver]()
+	str1Sec, str1SecErr := container.Resolve[SecondaryIDGiver]()
 
 	// Then
 	assert.NotNil(t, str1Prim)
+	assert.NotNil(t, str1Sec)
+	assert.NoError(t, str1PrimErr)
+	assert.NoError(t, str1SecErr)
 	assert.Equal(t, 1, Str1InstanceNumber)
 	assert.Equal(t, 0, Str2InstanceNumber)
 
@@ -121,14 +244,16 @@ func TestMultipleInterfacesToOneConcrete(t *testing.T) {
 func TestOneInterfaceToMultipleConcretes(t *testing.T) {
 	// Given
 	setup()
+
 	container.Bind[PrimaryIDGiver](NewTestStruct1)
 	container.Bind[PrimaryIDGiver](NewTestStruct2)
 
 	// When
-	primSlice := container.ResolveAll[PrimaryIDGiver]()
+	primSlice, err := container.ResolveAll[PrimaryIDGiver]()
 
 	// Then
 	assert.NotNil(t, primSlice)
+	assert.NoError(t, err)
 	assert.Len(t, primSlice, 2)
 	assert.Equal(t, 1, Str1InstanceNumber)
 	assert.Equal(t, 1, Str2InstanceNumber)
@@ -149,17 +274,21 @@ func TestOneInterfaceToMultipleConcretes(t *testing.T) {
 func TestMultipleInterfaceToMultipleConcretes(t *testing.T) {
 	// Given
 	setup()
+
 	container.Bind[PrimaryIDGiver](NewTestStruct1)
 	container.Bind[SecondaryIDGiver](NewTestStruct1)
 	container.Bind[PrimaryIDGiver](NewTestStruct2)
 	container.Bind[SecondaryIDGiver](NewTestStruct2)
 
 	// When
-	PrimSlice := container.ResolveAll[PrimaryIDGiver]()
-	SecSlice := container.ResolveAll[SecondaryIDGiver]()
+	PrimSlice, PrimSliceErr := container.ResolveAll[PrimaryIDGiver]()
+	SecSlice, SecSliceErr := container.ResolveAll[SecondaryIDGiver]()
 
 	// Then
 	assert.NotNil(t, PrimSlice)
+	assert.NotNil(t, SecSlice)
+	assert.NoError(t, PrimSliceErr)
+	assert.NoError(t, SecSliceErr)
 	assert.Len(t, PrimSlice, 2)
 	assert.Equal(t, 1, Str1InstanceNumber)
 	assert.Equal(t, 1, Str2InstanceNumber)
@@ -190,6 +319,7 @@ func TestMultipleInterfaceToMultipleConcretes(t *testing.T) {
 func TestResolverWithArgs(t *testing.T) {
 	// Given
 	setup()
+
 	container.Bind[PrimaryIDGiver](NewTestStruct1)
 	container.Bind[SecondaryIDGiver](NewTestStruct1)
 	container.Bind[PrimaryIDGiver](NewTestStruct2)
@@ -197,10 +327,11 @@ func TestResolverWithArgs(t *testing.T) {
 	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
 
 	// When
-	agg := container.Resolve[IDAggregator]()
+	agg, err := container.Resolve[IDAggregator]()
 
 	// Then
 	assert.NotNil(t, agg)
+	assert.NoError(t, err)
 	primIDs := agg.GivePrimaryIDs()
 	assert.Len(t, primIDs, 2)
 	assert.Equal(t, TestStruct1Name, primIDs[0].Name)
@@ -218,12 +349,17 @@ func TestResolverWithArgs(t *testing.T) {
 func TestResolverWithArgsMissingDependency(t *testing.T) {
 	// Given
 	setup()
+
 	container.Bind[PrimaryIDGiver](NewTestStruct1)
 	container.Bind[PrimaryIDGiver](NewTestStruct2)
 	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
 
-	// When & Then
-	assert.Panics(t, func() { container.Resolve[IDAggregator]() })
+	// When
+	val, err := container.Resolve[IDAggregator]()
+
+	// Then
+	assert.Nil(t, val)
+	assert.Error(t, err)
 
 	cleanup()
 }
@@ -231,12 +367,17 @@ func TestResolverWithArgsMissingDependency(t *testing.T) {
 func TestResolverWithArgsMissingDependencies(t *testing.T) {
 	// Given
 	setup()
+
 	container.Bind[SecondaryIDGiver](NewTestStruct1)
 	container.Bind[SecondaryIDGiver](NewTestStruct2)
 	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
 
-	// When & Then
-	assert.Panics(t, func() { container.Resolve[IDAggregator]() })
+	// When
+	val, err := container.Resolve[IDAggregator]()
+
+	// Then
+	assert.Nil(t, val)
+	assert.Error(t, err)
 
 	cleanup()
 }
