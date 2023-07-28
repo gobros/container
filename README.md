@@ -4,7 +4,7 @@
 A flexible Inversion of Control container for GoLang that uses lazy loading
 and generics to make it as easy to use as possible.
 
-Key Features:
+## Key Features:
 * Lazy loading (bound objects aren't resolved until requested)
 * Multiple interfaces to one resolver. This allows an object that satisfies 
   multiple interfaces to be bound to the container and resolved by any of it's
