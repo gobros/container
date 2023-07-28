@@ -86,7 +86,7 @@ func ResolveInstance[T any](container *Container) (T, error) {
 	return resolvedConcretes[len(resolvedConcretes)-1], nil
 }
 
-func resolveAllInstanceInternal(bindingType reflect.Type, container *Container) (any, error) {
+func resolveAllInstanceInternal(bindingType reflect.Type, container *Container) (resolvedRet any, errRet error) {
 	resolved := reflect.MakeSlice(reflect.SliceOf(bindingType), 0, 0)
 	resolverTypes := container.bindingToResolver[bindingType]
 
@@ -101,7 +101,15 @@ func resolveAllInstanceInternal(bindingType reflect.Type, container *Container) 
 				return nil, err
 			}
 
-			// TODO: wirecat handle panics to Call if possible
+			// Rare case where it's much better to handle the panic and give a descriptive error
+			defer func() {
+				if r := recover(); r != nil {
+					returnType := resolverValue.Type().Out(0)
+					resolvedRet = nil
+					errRet = fmt.Errorf("failed to resolve for interface (%v) for resolver with return type (%v), encountered panic (%v) ", bindingType.Name(), returnType, r)
+				}
+			}()
+
 			values := resolverValue.Call(args)
 			container.resolverToConcrete[resolverValue] = values[0].Interface()
 		}

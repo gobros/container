@@ -124,6 +124,23 @@ func TestNothingBoundResolveAll(t *testing.T) {
 	cleanup()
 }
 
+func TestResolverErrorPanic(t *testing.T) {
+	// Given
+	setup()
+	container.Bind[PrimaryIDGiver](func() *TestStruct1 {
+		panic("resolver did a bad!")
+	})
+
+	// When
+	val, err := container.Resolve[PrimaryIDGiver]()
+
+	// Then
+	assert.Error(t, err)
+	assert.Nil(t, val)
+
+	cleanup()
+}
+
 func TestResolverErrorNotAFunction(t *testing.T) {
 	// Given
 	setup()
