@@ -33,12 +33,12 @@ For convenience, there is an alternate version of all Global and Instance Contai
 Functions that wrap them and panic instead of returning an error.
 
 ```golang
-MustBind[T any](resolver any)
-MustResolveAll[T any]() []T
-MustResolve[T any]() T
-MustBindInstance[T any](container *Container, resolver any)
-MustResolveAllInstance[T any](container *Container) []T
-MustResolveInstance[T any](container *Container) T
+func MustBind[T any](resolver any)
+func MustResolveAll[T any]() []T
+func MustResolve[T any]() T
+func MustBindInstance[T any](container *Container, resolver any)
+func MustResolveAllInstance[T any](container *Container) []T
+func MustResolveInstance[T any](container *Container) T
 ```
 
 
