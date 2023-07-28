@@ -4,12 +4,21 @@
 A flexible Inversion of Control container for GoLang that uses lazy loading
 and generics to make it as easy to use as possible.
 
+Key Features:
+* Lazy loading (bound objects aren't resolved until requested)
+* Multiple interfaces to one resolver. This allows an object that satisfies 
+  multiple interfaces to be bound to the container and resolved by any of it's
+  bound interfaces.
+* Multiple resolvers to one interface. Allows a slice of objects to be resolved
+  for a given interface.
+* Runtime checks when binding to help ensure the container is used correctly.
+
+<br>
+
 # Installing
 Run the following command in your project directory to install.
 
 `go get github.com/gobros/container@latest`
-
-<br>
 
 # Why Use Inversion of Control?
 With Inversion of Control, dependencies can be satisfied automatically and
