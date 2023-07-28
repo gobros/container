@@ -30,7 +30,14 @@ parent to child.
 The primary operations this container performs are binding and resolving.
 
 ```golang
-// TODO an exmaple here with helpful comments!
+// Bind our implementation of IRandomIntGenerator
+container.MustBind[IRandomIntGenerator](NewFairRandomIntGenerator)
+
+// Resolve the bound implementation of IRandomIntGenerator
+generator := container.MustResolve[IRandomIntGenerator]()
+
+// Use the generator
+fmt.Printf("Random Number: %v\n", generator.Generate())
 ```
 
 # Global Container Functions
