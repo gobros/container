@@ -13,9 +13,33 @@ Run the following command in your project directory to install.
 The following attempts to give a quick high-level overview of the container.
 
 ## Global Container Functions
-These functions act upon the global container created by this module.
+These act upon the global container created by this module.
 
-* [Bind[T any](resolver any) error](#Bind)
+* [Bind\[T any\](resolver any) error](#Bind)
+* [ResolveAll\[T any\]() ([]T, error)](#ResolveAll)
+* [Resolve\[T any\]() (T, error)](#Resolve)
+
+## Instance Container Functions
+These act upon the container provided as a paramter. Can be used if you need
+multiple containers don't want to use the global container provided.
+
+* [BindInstance\[T any\](container *Container, resolver any) error](#BindInstance)
+* [ResolveAllInstance\[T any\](container *Container) ([]T, error)](#ResolveAllInstance)
+* [ResolveInstance\[T any\](container *Container) (T, error)](#ResolveInstance)
+
+
+## Must Container Functions
+For convenience, there is an alternate version of all Global and Instance Container
+Functions that wrap them and panic instead of returning an error.
+
+```golang
+MustBind[T any](resolver any)
+MustResolveAll[T any]() []T
+MustResolve[T any]() T
+MustBindInstance[T any](container *Container, resolver any)
+MustResolveAllInstance[T any](container *Container) []T
+MustResolveInstance[T any](container *Container) T
+```
 
 
 # Usage Guide
@@ -25,4 +49,19 @@ TODO
 TODO
 
 ### Bind
+TODO
+
+### ResolveAll
+TODO
+
+### Resolve
+TODO
+
+### BindInstance
+TODO
+
+### ResolveAllInstance
+TODO
+
+### ResolveInstance
 TODO
