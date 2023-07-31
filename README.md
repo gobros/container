@@ -1,5 +1,5 @@
 # GoBros Container
-<img align="left" src="mascot.png" width="200" alt="Gobros mascot, a picture of a gopher sitting in a cardboard box"/>
+<img align="left" style="padding-right: 40px; padding-bottom: 40px" src="mascot.png" width="200" alt="Gobros mascot, a picture of a gopher sitting in a cardboard box"/>
 
 A flexible Inversion of Control container for GoLang that uses lazy loading
 and generics to make it as easy to use as possible.
