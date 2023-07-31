@@ -140,3 +140,7 @@ func MustBindInstance[T any](container *Container, resolver any)
 func MustResolveAllInstance[T any](container *Container) []T
 func MustResolveInstance[T any](container *Container) T
 ```
+
+# Mascot Image
+The GoBros/container gopher was based off original designs by
+Renee French. (http://reneefrench.blogspot.com/)
