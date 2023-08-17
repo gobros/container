@@ -1,3 +1,5 @@
+![Build & Test](https://github.com/gobros/container/actions/workflows/go.yml/badge.svg)
+
 # GoBros Container
 <img align="left" style="padding-right: 40px; padding-bottom: 40px" src="mascot.png" width="200" alt="Gobros mascot, a picture of a gopher sitting in a cardboard box"/>
 
