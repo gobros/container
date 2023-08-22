@@ -1,6 +1,7 @@
 package container_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/gobros/container"
@@ -120,6 +121,23 @@ func TestNothingBoundResolveAll(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, 0, Str1InstanceNumber)
 	assert.Equal(t, 0, Str2InstanceNumber)
+
+	cleanup()
+}
+
+func TestResolverError(t *testing.T) {
+	// Given
+	setup()
+	container.Bind[PrimaryIDGiver](func() (*TestStruct1, error) {
+		return nil, errors.New("resolver did a bad!")
+	})
+
+	// When
+	val, err := container.Resolve[PrimaryIDGiver]()
+
+	// Then
+	assert.Error(t, err)
+	assert.Nil(t, val)
 
 	cleanup()
 }

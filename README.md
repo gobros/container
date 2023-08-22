@@ -53,9 +53,10 @@ fmt.Printf("Random Number: %v\n", generator.Generate())
 * Must bind against an Interface or Pointer type
 * Resolvers must be a function
 * Resolver must return a type that either implements or is assignable to the
-  bound type
+  bound type as the first return parameter
 * Resolver may have arguments, but they must be of type Interface, Pointer, or
-  Slice so the container can attemp to resolve them.
+  Slice so the container can attemp to resolve them
+* If a Resolver returns an error, it must be the second return parameter
 
 ## Requirements To Resolve
 * Provide an Interface or Pointer bound type to resolve

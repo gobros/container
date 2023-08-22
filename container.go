@@ -111,6 +111,13 @@ func resolveAllInstanceInternal(bindingType reflect.Type, container *Container) 
 			}()
 
 			values := resolverValue.Call(args)
+
+			if len(values) >= 2 && values[1].CanInterface() {
+				if err, ok := values[1].Interface().(error); ok {
+					return nil, fmt.Errorf("failed to resolve for interface (%v), resolver returned error: %w", bindingType.Name(), err)
+				}
+			}
+
 			container.resolverToConcrete[resolverValue] = values[0].Interface()
 		}
 
