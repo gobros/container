@@ -57,6 +57,8 @@ fmt.Printf("Random Number: %v\n", generator.Generate())
 * Resolver may have arguments, but they must be of type Interface, Pointer, or
   Slice so the container can attemp to resolve them
 * If a Resolver returns an error, it must be the second return parameter
+* If a resolver has any argument of type slice, it will receive an empty slice
+  if nothing is currently bound. The resolver is expected to handle empty slices.
 
 ## Requirements To Resolve
 * Provide an Interface or Pointer bound type to resolve

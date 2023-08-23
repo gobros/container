@@ -138,7 +138,9 @@ func resolveArguments(container *Container, resolverValue reflect.Value, binding
 			sliceType := argType.Elem()
 			arg, err := resolveAllInstanceInternal(sliceType, container)
 			if err != nil {
-				return nil, fmt.Errorf("resolver dependency error, failed to resolve dependency (%v) for interface (%v): %w", argType, bindingType.Name(), err)
+				// It's better to return an empty slice to let the resolver handle the empty slice than error
+				emptySlice := reflect.MakeSlice(reflect.SliceOf(sliceType), 0, 0)
+				arg = emptySlice.Interface()
 			}
 			argVal := reflect.ValueOf(arg)
 			args[i] = argVal
