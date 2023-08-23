@@ -329,7 +329,9 @@ func TestMustResolverWithArgsMissingDependencies(t *testing.T) {
 	container.MustBind[IDAggregator](NewTestIDAggregatorStruct)
 
 	// When & Then
-	assert.Panics(t, func() { container.MustResolve[IDAggregator]() })
+	val := container.MustResolve[IDAggregator]()
+	assert.NotNil(t, val)
+	assert.Empty(t, val.GivePrimaryIDs())
 
 	cleanup()
 }

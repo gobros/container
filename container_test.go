@@ -411,8 +411,9 @@ func TestResolverWithArgsMissingDependencies(t *testing.T) {
 	val, err := container.Resolve[IDAggregator]()
 
 	// Then
-	assert.Nil(t, val)
-	assert.Error(t, err)
+	assert.NoError(t, err)
+	assert.NotNil(t, val)
+	assert.Empty(t, val.GivePrimaryIDs())
 
 	cleanup()
 }
