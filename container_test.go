@@ -399,6 +399,70 @@ func TestResolverWithArgsMissingDependency(t *testing.T) {
 	cleanup()
 }
 
+func TestResolverWithArgsMissingSliceDependency(t *testing.T) {
+	// Given
+	setup()
+
+	container.Bind[SecondaryIDGiver](NewTestStruct1)
+	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+
+	// When
+	val, err := container.Resolve[IDAggregator]()
+
+	// Then
+	assert.NotNil(t, val)
+	assert.NoError(t, err)
+
+	primIDs := val.GivePrimaryIDs()
+	assert.Len(t, primIDs, 0)
+
+	secID := val.GiveSecondaryID()
+	assert.Equal(t, TestStruct1Name, secID.Name)
+	assert.Equal(t, Str1InstanceNumber, secID.Number)
+
+	cleanup()
+}
+
+func TestResolverWithArgsDependencyError(t *testing.T) {
+	// Given
+	setup()
+
+	container.Bind[PrimaryIDGiver](NewTestStruct1)
+	container.Bind[SecondaryIDGiver](func() (*TestStruct2, error) {
+		return nil, errors.New("resolver did a bad!")
+	})
+	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+
+	// When
+	val, err := container.Resolve[IDAggregator]()
+
+	// Then
+	assert.Nil(t, val)
+	assert.Error(t, err)
+
+	cleanup()
+}
+
+func TestResolverWithArgsSliceDependencyError(t *testing.T) {
+	// Given
+	setup()
+
+	container.Bind[PrimaryIDGiver](NewTestStruct1)
+	container.Bind[PrimaryIDGiver](func() (*TestStruct2, error) {
+		return nil, errors.New("resolver did a bad!")
+	})
+	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+
+	// When
+	val, err := container.Resolve[IDAggregator]()
+
+	// Then
+	assert.Nil(t, val)
+	assert.Error(t, err)
+
+	cleanup()
+}
+
 func TestResolverWithArgsMissingDependencies(t *testing.T) {
 	// Given
 	setup()

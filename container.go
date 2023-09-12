@@ -67,9 +67,15 @@ func ResolveAll[T any]() ([]T, error) {
 func ResolveAllInstance[T any](container *Container) ([]T, error) {
 	bindingType := getBindingType[T]()
 	retVal, err := resolveAllInstanceInternal(bindingType, container)
+
 	if err != nil {
 		return nil, err
 	}
+
+	if arrRetVal, ok := retVal.([]T); !ok || len(arrRetVal) == 0 {
+		return nil, fmt.Errorf("failed to resolve for interface (%v), nothing bound", bindingType.Name())
+	}
+
 	return retVal.([]T), nil
 }
 
@@ -89,10 +95,6 @@ func ResolveInstance[T any](container *Container) (T, error) {
 func resolveAllInstanceInternal(bindingType reflect.Type, container *Container) (resolvedRet any, errRet error) {
 	resolved := reflect.MakeSlice(reflect.SliceOf(bindingType), 0, 0)
 	resolverTypes := container.bindingToResolver[bindingType]
-
-	if len(resolverTypes) == 0 {
-		return nil, fmt.Errorf("failed to resolve for interface (%v), nothing bound", bindingType.Name())
-	}
 
 	for _, resolverValue := range resolverTypes {
 		if container.resolverToConcrete[resolverValue] == nil {
@@ -138,9 +140,7 @@ func resolveArguments(container *Container, resolverValue reflect.Value, binding
 			sliceType := argType.Elem()
 			arg, err := resolveAllInstanceInternal(sliceType, container)
 			if err != nil {
-				// It's better to return an empty slice to let the resolver handle the empty slice than error
-				emptySlice := reflect.MakeSlice(reflect.SliceOf(sliceType), 0, 0)
-				arg = emptySlice.Interface()
+				return args, fmt.Errorf("resolver dependency error, failed to resolve dependency (%v) for interface (%v): %w", argType, bindingType.Name(), err)
 			}
 			argVal := reflect.ValueOf(arg)
 			args[i] = argVal
@@ -149,7 +149,13 @@ func resolveArguments(container *Container, resolverValue reflect.Value, binding
 			if err != nil {
 				return nil, fmt.Errorf("resolver dependency error, failed to resolve dependency (%v) for interface (%v): %w", argType, bindingType.Name(), err)
 			}
+
 			argVal := reflect.ValueOf(arg)
+
+			if argVal.Len() == 0 {
+				return nil, fmt.Errorf("failed to resolve for interface (%v), nothing bound", bindingType.Name())
+			}
+
 			args[i] = argVal.Index(argVal.Len() - 1)
 		}
 	}
