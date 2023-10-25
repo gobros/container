@@ -423,6 +423,28 @@ func TestResolverWithArgsMissingSliceDependency(t *testing.T) {
 	cleanup()
 }
 
+func TestResolverWithMissingChainDependency(t *testing.T) {
+	// Given
+	setup()
+
+	// Depends on SecondaryIDGiver, which is not bound
+	container.Bind[SecondaryIDGiver](func(agg IDAggregator) *TestStruct2 {
+		return &TestStruct2{}
+	})
+	// Depends on SecondaryIDGiver, which is bound, but is also missing a dependency itself
+	container.Bind[PrimaryIDGiver](func(ids []SecondaryIDGiver) *TestStruct1 {
+		return &TestStruct1{}
+	})
+
+	// When
+	val, err := container.Resolve[PrimaryIDGiver]()
+
+	// Then
+	assert.Nil(t, val)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "IDAggregator")
+}
+
 func TestResolverWithArgsDependencyError(t *testing.T) {
 	// Given
 	setup()
