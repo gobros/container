@@ -153,7 +153,7 @@ func resolveArguments(container *Container, resolverValue reflect.Value, binding
 			argVal := reflect.ValueOf(arg)
 
 			if argVal.Len() == 0 {
-				return nil, fmt.Errorf("failed to resolve for interface (%v), nothing bound", bindingType.Name())
+				return nil, fmt.Errorf("resolver dependency error, failed to resolve dependency (%v) for interface (%v)", argType, bindingType.Name())
 			}
 
 			args[i] = argVal.Index(argVal.Len() - 1)
