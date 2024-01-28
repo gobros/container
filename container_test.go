@@ -9,7 +9,7 @@ import (
 )
 
 func setup() {
-	container.EmptyInstance(container.Global)
+	container.EmptyContainer(container.Global)
 
 	// Reset the struct IDs now that the container is empty
 	Str1InstanceNumber = 0
@@ -24,7 +24,8 @@ func TestSimpleBind(t *testing.T) {
 	// Given
 	setup()
 
-	container.Bind[PrimaryIDGiver](NewTestStruct1)
+	err := container.Bind[PrimaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
 
 	// When
 	str1Prim, err := container.Resolve[PrimaryIDGiver]()
@@ -46,8 +47,10 @@ func TestSimpleBindOverride(t *testing.T) {
 	// Given
 	setup()
 
-	container.Bind[PrimaryIDGiver](NewTestStruct1)
-	container.Bind[PrimaryIDGiver](NewTestStruct1)
+	err := container.Bind[PrimaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
+	err = container.Bind[PrimaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
 
 	// When
 	str1Prim, err := container.Resolve[PrimaryIDGiver]()
@@ -77,9 +80,10 @@ func TestSimpleBindPointer(t *testing.T) {
 		Name:       "wirecat",
 		FaveNumber: 1337,
 	}
-	container.Bind[*ptrStruct](func() *ptrStruct {
+	err := container.Bind[*ptrStruct](func() *ptrStruct {
 		return &testVal
 	})
+	assert.NoError(t, err)
 
 	// When
 	resolvedVal, err := container.Resolve[*ptrStruct]()
@@ -128,9 +132,10 @@ func TestNothingBoundResolveAll(t *testing.T) {
 func TestResolverError(t *testing.T) {
 	// Given
 	setup()
-	container.Bind[PrimaryIDGiver](func() (*TestStruct1, error) {
+	err := container.Bind[PrimaryIDGiver](func() (*TestStruct1, error) {
 		return nil, errors.New("resolver did a bad!")
 	})
+	assert.NoError(t, err)
 
 	// When
 	val, err := container.Resolve[PrimaryIDGiver]()
@@ -145,9 +150,10 @@ func TestResolverError(t *testing.T) {
 func TestResolverErrorPanic(t *testing.T) {
 	// Given
 	setup()
-	container.Bind[PrimaryIDGiver](func() *TestStruct1 {
+	err := container.Bind[PrimaryIDGiver](func() *TestStruct1 {
 		panic("resolver did a bad!")
 	})
+	assert.NoError(t, err)
 
 	// When
 	val, err := container.Resolve[PrimaryIDGiver]()
@@ -231,6 +237,21 @@ func TestResolverErrorNoReturn(t *testing.T) {
 	cleanup()
 }
 
+func TestResolverErrorSecondReturnNotError(t *testing.T) {
+	// Given
+	setup()
+
+	// When
+	err := container.Bind[*int](func() (*int, int) {
+		return nil, 5
+	})
+
+	// Then
+	assert.Error(t, err)
+
+	cleanup()
+}
+
 func TestResolverErrorBadArg(t *testing.T) {
 	// Given
 	setup()
@@ -250,8 +271,10 @@ func TestMultipleInterfacesToOneConcrete(t *testing.T) {
 	// Given
 	setup()
 
-	container.Bind[PrimaryIDGiver](NewTestStruct1)
-	container.Bind[SecondaryIDGiver](NewTestStruct1)
+	err := container.Bind[PrimaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
+	err = container.Bind[SecondaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
 
 	// When
 	str1Prim, str1PrimErr := container.Resolve[PrimaryIDGiver]()
@@ -280,8 +303,10 @@ func TestOneInterfaceToMultipleConcretes(t *testing.T) {
 	// Given
 	setup()
 
-	container.Bind[PrimaryIDGiver](NewTestStruct1)
-	container.Bind[PrimaryIDGiver](NewTestStruct2)
+	err := container.Bind[PrimaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
+	err = container.Bind[PrimaryIDGiver](NewTestStruct2)
+	assert.NoError(t, err)
 
 	// When
 	primSlice, err := container.ResolveAll[PrimaryIDGiver]()
@@ -310,10 +335,14 @@ func TestMultipleInterfaceToMultipleConcretes(t *testing.T) {
 	// Given
 	setup()
 
-	container.Bind[PrimaryIDGiver](NewTestStruct1)
-	container.Bind[SecondaryIDGiver](NewTestStruct1)
-	container.Bind[PrimaryIDGiver](NewTestStruct2)
-	container.Bind[SecondaryIDGiver](NewTestStruct2)
+	err := container.Bind[PrimaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
+	err = container.Bind[SecondaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
+	err = container.Bind[PrimaryIDGiver](NewTestStruct2)
+	assert.NoError(t, err)
+	err = container.Bind[SecondaryIDGiver](NewTestStruct2)
+	assert.NoError(t, err)
 
 	// When
 	PrimSlice, PrimSliceErr := container.ResolveAll[PrimaryIDGiver]()
@@ -355,11 +384,16 @@ func TestResolverWithArgs(t *testing.T) {
 	// Given
 	setup()
 
-	container.Bind[PrimaryIDGiver](NewTestStruct1)
-	container.Bind[SecondaryIDGiver](NewTestStruct1)
-	container.Bind[PrimaryIDGiver](NewTestStruct2)
-	container.Bind[SecondaryIDGiver](NewTestStruct2)
-	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+	err := container.Bind[PrimaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
+	err = container.Bind[SecondaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
+	err = container.Bind[PrimaryIDGiver](NewTestStruct2)
+	assert.NoError(t, err)
+	err = container.Bind[SecondaryIDGiver](NewTestStruct2)
+	assert.NoError(t, err)
+	err = container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+	assert.NoError(t, err)
 
 	// When
 	agg, err := container.Resolve[IDAggregator]()
@@ -385,9 +419,12 @@ func TestResolverWithArgsMissingDependency(t *testing.T) {
 	// Given
 	setup()
 
-	container.Bind[PrimaryIDGiver](NewTestStruct1)
-	container.Bind[PrimaryIDGiver](NewTestStruct2)
-	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+	err := container.Bind[PrimaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
+	err = container.Bind[PrimaryIDGiver](NewTestStruct2)
+	assert.NoError(t, err)
+	err = container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+	assert.NoError(t, err)
 
 	// When
 	val, err := container.Resolve[IDAggregator]()
@@ -403,8 +440,10 @@ func TestResolverWithArgsMissingSliceDependency(t *testing.T) {
 	// Given
 	setup()
 
-	container.Bind[SecondaryIDGiver](NewTestStruct1)
-	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+	err := container.Bind[SecondaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
+	err = container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+	assert.NoError(t, err)
 
 	// When
 	val, err := container.Resolve[IDAggregator]()
@@ -428,13 +467,15 @@ func TestResolverWithMissingChainDependency(t *testing.T) {
 	setup()
 
 	// Depends on SecondaryIDGiver, which is not bound
-	container.Bind[SecondaryIDGiver](func(agg IDAggregator) *TestStruct2 {
+	err := container.Bind[SecondaryIDGiver](func(agg IDAggregator) *TestStruct2 {
 		return &TestStruct2{}
 	})
+	assert.NoError(t, err)
 	// Depends on SecondaryIDGiver, which is bound, but is also missing a dependency itself
-	container.Bind[PrimaryIDGiver](func(ids []SecondaryIDGiver) *TestStruct1 {
+	err = container.Bind[PrimaryIDGiver](func(ids []SecondaryIDGiver) *TestStruct1 {
 		return &TestStruct1{}
 	})
+	assert.NoError(t, err)
 
 	// When
 	val, err := container.Resolve[PrimaryIDGiver]()
@@ -449,11 +490,14 @@ func TestResolverWithArgsDependencyError(t *testing.T) {
 	// Given
 	setup()
 
-	container.Bind[PrimaryIDGiver](NewTestStruct1)
-	container.Bind[SecondaryIDGiver](func() (*TestStruct2, error) {
+	err := container.Bind[PrimaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
+	err = container.Bind[SecondaryIDGiver](func() (*TestStruct2, error) {
 		return nil, errors.New("resolver did a bad!")
 	})
-	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+	assert.NoError(t, err)
+	err = container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+	assert.NoError(t, err)
 
 	// When
 	val, err := container.Resolve[IDAggregator]()
@@ -469,11 +513,14 @@ func TestResolverWithArgsSliceDependencyError(t *testing.T) {
 	// Given
 	setup()
 
-	container.Bind[PrimaryIDGiver](NewTestStruct1)
-	container.Bind[PrimaryIDGiver](func() (*TestStruct2, error) {
+	err := container.Bind[PrimaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
+	err = container.Bind[PrimaryIDGiver](func() (*TestStruct2, error) {
 		return nil, errors.New("resolver did a bad!")
 	})
-	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+	assert.NoError(t, err)
+	err = container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+	assert.NoError(t, err)
 
 	// When
 	val, err := container.Resolve[IDAggregator]()
@@ -489,9 +536,12 @@ func TestResolverWithArgsMissingDependencies(t *testing.T) {
 	// Given
 	setup()
 
-	container.Bind[SecondaryIDGiver](NewTestStruct1)
-	container.Bind[SecondaryIDGiver](NewTestStruct2)
-	container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+	err := container.Bind[SecondaryIDGiver](NewTestStruct1)
+	assert.NoError(t, err)
+	err = container.Bind[SecondaryIDGiver](NewTestStruct2)
+	assert.NoError(t, err)
+	err = container.Bind[IDAggregator](NewTestIDAggregatorStruct)
+	assert.NoError(t, err)
 
 	// When
 	val, err := container.Resolve[IDAggregator]()
