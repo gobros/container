@@ -142,6 +142,7 @@ func TestResolverError(t *testing.T) {
 
 	// Then
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "resolver did a bad!")
 	assert.Nil(t, val)
 
 	cleanup()
@@ -160,6 +161,7 @@ func TestResolverErrorPanic(t *testing.T) {
 
 	// Then
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "resolver did a bad!")
 	assert.Nil(t, val)
 
 	cleanup()
