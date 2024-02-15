@@ -132,7 +132,7 @@ func resolveAllInstanceInternal(bindingType reflect.Type, container *Container) 
 
 		// If we have 2 or more returns, the second return may be in an error state
 		if len(values) >= 2 && values[1].Interface() != nil {
-			return nil, fmt.Errorf("failed to resolve for interface (%v), resolver returned error: %w", bindingType.Name(), err)
+			return nil, fmt.Errorf("failed to resolve for interface (%v), resolver returned error: %w", bindingType.Name(), values[1].Interface().(error))
 		}
 
 		container.resolverToConcreteInstance[resolver] = values[0].Interface()
